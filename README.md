@@ -6,5 +6,5 @@ Here's a brief outline of what I'd like to discuss and script:
 
 - Obtaining SEER data and making it R-friendly
 - Recoding variables so that the data is even more R-friendly
-- Logistic regression to predict a second cancer
+- Sex and race matching
 - Survival analysis and Cox Hazards for time until second cancer
