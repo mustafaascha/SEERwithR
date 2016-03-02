@@ -1,0 +1,144 @@
+start,width,SAS,SEERaBomb,desc
+1,8,CASENUM,casenum,Patient ID number
+9,10,REG,reg,Registry ID
+19,1,MAR_STAT,marstat,Marital Status at DX
+20,2,RACE,race,Race/Ethnicity
+22,1,ORIGIN,origin,Spanish/Hispanic Origin
+23,1,NHIA,nhia,NHIA Derived Hispanic Origin
+24,1,SEX,sex,Sex
+25,3,AGE_DX,agedx,Age at diagnosis
+28,4,YR_BRTH,yrbrth,Year of birth
+32,3,PLC_BRTH,plcbrth,Birth Place
+35,2,SEQ_NUM,seqnum,Sequence Number--Central
+37,2,DATE_mo,modx,Month of diagnosis
+39,4,DATE_yr,yrdx,Year of diagnosis
+43,4,SITEO2V,siteo2,Primary site
+47,1,LATERAL,lateral,Laterality
+48,4,HISTO2V,histo2,Histology (92-00) ICD-O-2
+52,1,BEHO2V,beho2,Behavior (92-00) ICD-O-2
+53,4,HISTO3V,histo3,Histologic Type ICD-O-3
+57,1,BEHO3V,beho3,Behavior Code ICD-O-3
+58,1,GRADE,grade,Grade
+59,1,DX_CONF,dxconf,Diagnostic Confirmation
+60,1,REPT_SRC,reptsrc,Type of Reporting Source
+61,3,EOD10_SZ,eod10sz,EOD 10--Tumor size
+64,2,EOD10_EX,eod10ex,EOD 10--Extension
+66,2,EOD10_PE,eod10pe,EOD 10--Extension Prost Path
+68,1,EOD10_ND,eod10nd,EOD 10--Lymph Node Involv
+69,2,EOD10_PN,eod10pn,Regional Nodes Positive
+71,2,EOD10_NE,eod10ne,Regional Nodes Examined
+73,13,EOD13,eod13,EOD--Old 13 digit
+86,2,EOD2,eod2,EOD--Old 2 digit
+88,4,EOD4,eod4,EOD--Old 4 digit
+92,1,EODCODE,eodcode,Coding System for EOD
+93,1,TUMOR_1V,tumor1,Tumor Marker 1
+94,1,TUMOR_2V,tumor2,Tumor Marker 2
+95,1,TUMOR_3V,tumor3,Tumor Marker 3
+96,3,CS_SIZE,cssize,Collaborative Stage (CS) Tumor Size
+99,3,CS_EXT,csext,CS Extension
+102,3,CS_NODE,csnode,CS Lymph Nodes
+105,2,CS_METS,csmets,CS Mets at DX
+107,3,CS_SSF1,csssf1,CS Site-Specific Factor 1
+110,3,CS_SSF2,csssf2,CS Site-Specific Factor 2
+113,3,CS_SSF3,csssf3,CS Site-Specific Factor 3
+116,3,CS_SSF4,csssf4,CS Site-Specific Factor 4
+119,3,CS_SSF5,csssf5,CS Site-Specific Factor 5
+122,3,CS_SSF6,csssf6,CS Site-Specific Factor 6
+125,3,CS_SSF25,csssf25,CS Site-Specific Factor 25
+128,2,D_AJCC_T,dajcct,Derived AJCC T
+130,2,D_AJCC_N,dajccn,Derived AJCC N
+132,2,D_AJCC_M,dajccm,Derived AJCC M
+134,2,D_AJCC_S,dajccs,Derived AJCC Stage Group
+136,1,D_SSG77,dssg77,Derived SS1977
+137,1,D_SSG00,dssg00,Derived SS2000
+138,1,D_AJCC_F,dajccf,Derived AJCC - flag
+139,1,D_SSG77F,dssg77f,Derived SS1977 - flag
+140,1,D_SSG00F,dssg00f,Derived SS2000 - flag
+141,6,CSV_ORG,csvorg,CS Version Input Original
+147,6,CSV_DER,csvder,CS Version Derived
+153,6,CSV_CUR,csvcur,CS Version Input Current
+159,2,SURGPRIM,surgprim,RX Summ--Surg Prim Site
+161,1,SCOPE,scope,RX Summ--Scope Reg LN Sur
+162,1,SURGOTH,surgoth,RX Summ--Surg Oth Reg/Dis
+163,2,SURGNODE,surgnode,RX Summ--Reg LN Examined
+165,1,RECONST,reconst,RX Summ--Reconstruct 1st
+166,1,NO_SURG,nosurg,Reason for no surgery
+167,1,RADIATN,radiatn,RX Summ--Radiation
+168,1,RAD_BRN,radbrn,RX Summ--Rad to CNS
+169,1,RAD_SURG,radsurg,RX Summ--Surg/Rad Seq
+170,2,SS_SURG,sssurg,RX Summ--Surgery Type
+172,2,SRPRIM02,srprim02,RX Summ--Surg Site 98-02
+174,1,SCOPE02,scope02,RX Summ--Scope Reg 98-02
+175,1,SRGOTH02,srgoth02,RX Summ--Surg Oth 98-02
+176,2,REC_NO,recno,SEER Record number
+178,1,O_SITAGE,ositage,Over-ride age/site/morph
+179,1,O_SEQCON,oseqcon,Over-ride seqno/dxconf
+180,1,O_SEQLAT,oseqlat,Over-ride site/lat/seqno
+181,1,O_SURCON,osurcon,Over-ride surg/dxconf
+182,1,O_SITTYP,osittyp,Over-ride site/type
+183,1,H_BENIGN,hbenign,Over-ride histology
+184,1,O_RPTSRC,orptsrc,Over-ride report source
+185,1,O_DFSITE,odfsite,Over-ride ill-define site
+186,1,O_LEUKDX,oleukdx,"Over-ride Leuk, Lymph"
+187,1,O_SITBEH,ositbeh,Over-ride site/behavior
+188,1,O_EODDT,oeoddt,Over-ride site/cod/dx dt
+189,1,O_SITEOD,ositeod,Over-ride site/lat/eod
+190,1,O_SITMOR,ositmor,Over-ride site/lat/morph
+191,1,TYPEFUP,typefup,SEER Type of followup
+192,2,AGE_REC,agerec,Age Recode <1 Year olds
+199,5,SITERWHO,siterwho,Site recode ICD-O-3/WHO 2008
+204,4,ICDOTO9V,ICD9,Recode ICD-O-2 to 9
+208,4,ICDOT10V,ICD10,Recode ICD-O-2 to 10
+218,3,ICCC3WHO,iccc3who,ICCC site recode ICD-O-3/WHO 2008
+221,3,ICCC3XWHO,iccc3xwho,ICCC site rec extended ICD-O-3/WHO 2008
+224,1,BEHANAL,behanal,Behavior Recode for Analysis
+226,2,HISTREC,histrec,Histology Recode--Broad Groupings
+228,2,BRAINREC,brainrec,Histology Recode--Brain Groupings
+230,3,CS0204SCHEMA,cs0204schema,CS Schema v0204
+233,1,RAC_RECA,racreca,"Race recode (White, Black, Other)"
+234,1,RAC_RECY,racrecy,"Race recode (W, B, AI, API"
+235,1,NHIAREC,nhiarec,"Origin Recode NHIA(Hispanic,Non-Hisp)"
+236,1,HST_STGA,hststga,SEER historic stage A
+237,2,AJCC_STG,ajccstg,AJCC stage 3rd edition (1988-2003)
+239,2,AJ_3SEER,aj3seer,SEER modified AJCC stage 3rd ed (1988-2003)
+241,1,SSG77,ssg77,SEER Summary Stage 1977 (1995-2000)
+242,1,SSG2000,ssg2000,SEER Summary Stage 2000 2000 (2001-2003)
+243,2,NUMPRIMS,numprims,Number of primaries
+245,1,FIRSTPRM,firstprm,First malignant primary indicator
+246,5,STCOUNTY,stcounty,State-county recode
+255,5,ICD_5DIG,COD,Cause of death to SEER site recode
+260,5,CODKM,codkm,COD to site rec KM
+265,1,STAT_REC,statrec,Vital status recode (study cutoff used)
+266,1,IHS,ihs,IHS link
+267,1,HIST_SSG_2000,histssg2000,Summary stage 2000 (1998+)
+268,2,AYA_RECODE,ayarecode,AYA site recode/WHO 2008
+270,2,LYMPHOMA_RECODE,lymphomarecode,Lymphoma subtype recode/WHO 2008
+272,1,DTH_CLASS,dthclass,SEER Cause-Specific Death Classification
+273,1,O_DTH_CLASS,odthclass,SEER Other Cause of Death Classification
+274,1,EXTEVAL,exteval,CS Tumor Size/Ext Eval
+275,1,NODEEVAL,nodeeval,CS Lymph Nodes Eval
+276,1,METSEVAL,metseval,CS Mets Eval
+277,1,INTPRIM,intprim,Primary by international rules
+278,1,ERSTATUS,erstatus,ER Status Recode Breast Cancer (1990+)
+279,1,PRSTATUS,prstatus,PR Status Recode Breast Cancer (1990+)
+280,2,CSSCHEMA,csschema,CS Schema - AJCC 6th ed(previously called v1)
+282,3,CS_SSF8,csssf8,CS Site-Specific Factor 8
+285,3,CS_SSF10,csssf10,CS Site-Specific Factor 10
+288,3,CS_SSF11,csssf11,CS Site-Specific Factor 11
+291,3,CS_SSF13,csssf13,CS Site-Specific Factor 13
+294,3,CS_SSF15,csssf15,CS Site-Specific Factor 15
+297,3,CS_SSF16,csssf16,CS Site-Specific Factor 16
+300,1,VASINV,vasin,Lymph-vascular Invasion (2004+)
+301,4,SRV_TIME_MON,surv,Survival months
+305,1,SRV_TIME_MON_FLAG,srvtimemonflag,Survival months flag
+306,4,SRV_TIME_MON_PA,srvtimemonpa,Survival months - presumed alive
+310,1,SRV_TIME_MON_FLAG_PA,srvtimemonflagpa,Survival months flag - presumed alive
+311,1,INSREC_PUB,insrecpub,Insurance Recode (2007+)
+312,3,DAJCC7T,dajcc7t,Derived AJCC T 7th ed
+315,3,DAJCC7N,dajcc7n,Derived AJCC N 7th ed
+318,3,DAJCC7M,dajcc7m,Derived AJCC M 7th ed
+321,3,DAJCC7STG,dajcc7stg,Derived AJCC 7 Stage Group
+324,2,ADJTM_6VALUE,adjtm6value,Adjusted AJCC 6th T with mets (1988+)
+326,2,ADJNM_6VALUE,adjnm6value,Adjusted AJCC 6th N with mets (1988+)
+328,2,ADJM_6VALUE,adjm6value,Adjusted AJCC 6th M
+330,2,ADJAJCCSTG,adjajccstg,Adjusted AJCC 6th Stage (1988+) ;
