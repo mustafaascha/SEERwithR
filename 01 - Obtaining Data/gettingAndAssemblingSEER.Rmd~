@@ -24,11 +24,7 @@ If you're interested in learning more about it, check out the [SEERaBomb page](h
 
 All the R code on this page will be shown in the HTML version, so don't worry about looking at the source for secrets and tricks. 
 
-Here, we'll install/load the SEERaBomb package and run the first command for assembling SEER files. 
-
-**Notes**  
-	- You'll want to put the SEER data in the same folder as your active R directory. For the purposes of this document, we'll be working on that assumption.  
-	- Installing one of the dependencies for SEERaBomb also requires installing a library outside of R, the Open GL Utility, "GLU". For Ubuntu users, run `sudo apt-get install libglu1-mesa-dev`; for RedHat users, run `yum install Mesa-devel`. If you're using a Mac, go [here](http://alumni.cs.ucsb.edu/~wombatty/tutorials/opengl_mac_osx.html) for instructions on setting that up. For Windows or several other operating systems, see [here](https://www.opengl.org/documentation/implementations/) for how to install GLU. 
+Here, we'll load the SEERaBomb package and run the first command for assembling SEER files. **Note**, you'll want to put the SEER data in the same folder as your active R directory. For the purposes of this document, we'll be working on that assumption. 
 
 ```{r SEERaBombStart, message = FALSE, warning = FALSE}
 #if you haven't installed it yet, use this command to install dependencies
