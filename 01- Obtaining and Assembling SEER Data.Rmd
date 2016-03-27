@@ -111,7 +111,7 @@ citationOne
 
 ```
 
-[1] T. Radivoyevitch. SEERaBomb: SEER and Atomic Bomb Survivor Data Analysis Tools. R package version 2015.2. 2015. <URL: https://CRAN.R-project.org/package=SEERaBomb>.
+[1] T. Radivoyevitch. SEERaBomb: SEER and Atomic Bomb Survivor Data Analysis Tools. R package version 2015.2. 2015. URL: https://CRAN.R-project.org/package=SEERaBomb
 
 
 
