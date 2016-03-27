@@ -3,6 +3,7 @@ title: "Data Conglomeration: SEER parts into a whole"
 author: "Mustafa Ascha"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
+  toc: true
 ---
 
 ```{r options, echo = FALSE}
