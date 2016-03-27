@@ -14,6 +14,8 @@ knitr::opts_chunk$set(echo = TRUE,
 
 ```
 
+#Data Conglomeration: SEER parts into a whole
+
 **Intro:** The Surveillance, Epidemiology, and End Results (SEER) Program provides a lot of potentially useful cancer data. Unfortunately, the data formats are a bit limited at first. 
 
 **Purpose:** To obtain SEER data and combine the 40 provided files into just a few useful files, using R. 
