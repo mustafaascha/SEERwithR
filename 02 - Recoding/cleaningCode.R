@@ -1,0 +1,295 @@
+#cleaning cancer 2
+
+#goals:
+#1 recode factors to descriptive levels
+#2 convert NA values to NA
+
+
+library(dplyr)
+library(stringr)
+library(lubridate)
+
+
+load("../fakeSEERData")
+
+#race======================================================
+
+canc$race <- as.character(canc$race)
+
+canc$race[canc$race == "white"] <- "White"
+
+canc$race[canc$race == "black"] <- "Black"
+
+canc$race[canc$race == "other"] <- "Other"
+
+canc$race <- 
+  as.factor(canc$race)
+
+canc$race <- 
+  relevel(canc$race, ref = "White")
+
+#origin====================================================
+
+table(canc$origin)
+
+canc$origin[canc$origin == 0] <- "Non-Spanish/Non-Hispanic"
+
+canc$origin[canc$origin == 1] <- "Mexican"
+
+canc$origin[canc$origin == 2] <- "Puerto Rican"
+
+canc$origin[canc$origin == 3] <- "Cuban"
+
+canc$origin[canc$origin == 4] <- "South/Central American"
+
+canc$origin[canc$origin == 5] <- "Other Spanish/Hispanic"
+
+canc$origin[canc$origin == 6] <- "Spanish NOS"
+
+canc$origin[canc$origin == 7] <- "Spanish by surname only"
+
+canc$origin[canc$origin == 8] <- "Dominican Republic"
+
+canc$origin[canc$origin == 9] <- "Unknown"
+
+#make hispanic origin binary...
+
+canc$origin <- ifelse(canc$origin == "Non-Spanish/Non-Hispanic", "No", "Yes")
+
+#sex=======================================================
+
+canc$sex <- as.character(canc$sex)
+
+canc$sex[canc$sex == "male"] <- "Male"
+
+canc$sex[canc$sex == "female"] <- "Female"
+
+canc$sex <- as.factor(canc$sex)
+
+table(canc$sex)
+
+#beho3=====================================================
+
+canc$beho3[canc$beho3 == 0] <- "Benign"
+
+canc$beho3[canc$beho3 == 1] <- "Intracranial/CNS Uncertain"
+
+canc$beho3[canc$beho3 == 2] <- "Carcinoma i.s. or Intraepithelial noninfil. noninv."
+
+canc$beho3[canc$beho3 == 3] <- "Malignant primary site invasive"
+
+#grade=====================================================
+
+canc$grade[canc$grade == 1] <- "Grade 1"
+
+canc$grade[canc$grade == 2] <- "Grade 2"
+
+canc$grade[canc$grade == 3] <- "Grade 3"
+
+canc$grade[canc$grade == 4] <- "Grade 4"
+
+canc$grade[canc$grade == 5] <- "T-cell or T-cell precursor"
+
+canc$grade[canc$grade == 6] <- "B-cell or B-cell precursor"
+
+canc$grade[canc$grade == 7] <- "Null cell, non-t non-b"
+
+canc$grade[canc$grade == 8] <- "NK cell"
+
+canc$grade[canc$grade == 9] <- "Cell type not determined or applicable"
+
+#behavior recode for analysis==============================
+
+canc$behanal[canc$behanal == 0] <- "Benign"
+
+canc$behanal[canc$behanal == 1] <- "Borderline Malignant"
+
+canc$behanal[canc$behanal == 2] <- "In situ"
+
+canc$behanal[canc$behanal == 3] <- "Maignant"
+
+canc$behanal[canc$behanal == 4] <- "Only malignant in ICDO3"
+
+canc$behanal[canc$behanal == 5] <- "No longer reportable in ICDO3"
+
+canc$behanal[canc$behanal == 6] <- "Only malignant 2010+"
+
+#first primary=============================================
+
+canc$firstprm[canc$firstprm == 0] <- "No"
+
+canc$firstprm[canc$firstprm == 1] <- "Yes"
+
+#COD - site recode=========================================
+icd0class <- read.table(file = "../data/site02vComplete.ssv", sep = ";", stringsAsFactors = FALSE, fill = NA)
+
+icd0class <- icd0class %>% select(V1, V5) %>% filter(V5 != "")
+
+icd0class$V5 <- str_extract_all(string = icd0class$V5, pattern = "[0-9]{5}")
+
+names(icd0class)[2] <- "COD"
+
+icd0class$COD <- as.numeric(icd0class$COD)
+
+canc <- left_join(canc, icd0class[,c(1,2)], by = "COD")
+
+names(canc)[38] <- "COD.Names"
+
+rm(icd0class)
+
+#COD - site recode KM=========================================
+icd0class <- read.table(file = "../data/site02vComplete.ssv", sep = ";", stringsAsFactors = FALSE, fill = NA)
+
+icd0class <- icd0class %>% select(V1, V5) %>% filter(V5 != "")
+
+icd0class$V5 <- str_extract_all(string = icd0class$V5, pattern = "[0-9]{5}")
+
+names(icd0class)[2] <- "codkm"
+
+icd0class$codkm <- as.numeric(icd0class$codkm)
+
+canc <- left_join(canc, icd0class[,c(1,2)], by = "codkm")
+
+names(canc)[39] <- "codkm.Names"
+
+rm(icd0class)
+
+#vital status================================================
+
+canc$statrec[canc$statrec == 1] <- "Alive"
+
+canc$statrec[canc$statrec == 4] <- "Dead"
+
+#dthclass===================================================
+
+canc$dthclass[canc$dthclass == 0] <- "Alive or Dead of other cause"
+
+canc$dthclass[canc$dthclass == 1] <- "Dead"
+
+canc$dthclass[canc$dthclass == 9] <- "NA - not first tumor"
+
+#other dth class===================================================
+
+canc$odthclass[canc$odthclass == 0] <- "Alive or Dead due to cancer"
+
+canc$odthclass[canc$odthclass == 1] <- "Dead"
+
+canc$odthclass[canc$odthclass == 9] <- "NA - not first tumor"
+
+#intprim===================================================
+
+canc$intprim[canc$intprim == 0] <- "No"
+
+canc$intprim[canc$intprim == 1] <- "Yes"
+
+canc$intprim[canc$intprim == 9] <- "Behavioral exclusion"
+
+#radiatn================================================
+
+canc$radiatn[canc$radiatn == 0] <- "None"
+canc$radiatn[canc$radiatn == 1] <- "Beam Radiation"
+canc$radiatn[canc$radiatn == 2] <- "Radioactive Implants"
+canc$radiatn[canc$radiatn == 3] <- "Radioisotops"
+canc$radiatn[canc$radiatn == 4] <- "Beam and implants or isotopes"
+canc$radiatn[canc$radiatn == 5] <- "Radiation NOS"
+canc$radiatn[canc$radiatn == 6] <- "Other Radiation"
+canc$radiatn[canc$radiatn == 7] <- "Refused Radiation"
+canc$radiatn[canc$radiatn == 8] <- "Recommended, Admin Unknown"
+canc$radiatn[canc$radiatn == 9] <- "Unknown if admin"
+
+#radiation to cns=======================================
+
+canc$radbrn[canc$radbrn == 0] <- "None"
+canc$radbrn[canc$radbrn == 1] <- "Radiation"
+canc$radbrn[canc$radbrn == 7] <- "Refused"
+canc$radbrn[canc$radbrn == 8] <- "Recommended, Admin Unknown"
+canc$radbrn[canc$radbrn == 9] <- "Unknown"
+
+#typefu================================================
+
+canc$typefup[canc$typefu == 1] <- "Autopsy or Death Cert"
+canc$typefup[canc$typefu == 2] <- "Active FU"
+canc$typefup[canc$typefu == 3] <- "In situ of cervix only"
+canc$typefup[canc$typefu == 4] <- "Case only now in FU"
+
+#surv===================================================
+
+canc$surv[canc$surv == 9999] <- NA
+
+#srvtimemonflag=========================================
+
+#recode survival flags
+canc$srvtimemonflag <- 
+  factor(canc$srvtimemonflag, levels = c(0, 1, 2, 3, 8),
+         labels = c("Date Last Contact = Date Dx", 
+                    "Date Last Contact > Date Dx",
+                    "Incomplete dates, maybe zero FU days",
+                    "Incomplete dates, not zero FU days",
+                    "Unknown"))
+
+#srvtimemonpa=================================================== #need to rerun for this command!
+
+canc$srvtimemonpa[canc$srvtimemonpa == 9999] <- NA
+
+#srvtimemonflagpa=======================================
+
+canc$srvtimemonflagpa <- 
+  factor(canc$srvtimemonflagpa, levels = c(0, 1, 2, 3, 8),
+         labels = c("Date Last Contact = Date Dx", 
+                    "Date Last Contact > Date Dx",
+                    "Incomplete dates, maybe zero FU days",
+                    "Incomplete dates, not zero FU days",
+                    "Unknown"))
+
+#add Names to histo3==================================================
+
+#read names
+icdO3codes <- read.csv("../data/icdo3Codes.csv", stringsAsFactors = FALSE)
+
+#figuring out what's called what
+labelJoin <- 
+  icdO3codes[icdO3codes$Histology.Behavior.Four %in% unique(mds$Histology.ICDO3),c(7,8)] %>% 
+  unique
+
+rm(icdO3codes)
+
+#make names of names useful
+names(labelJoin) <- c("Morphology", "Histology.ICDO3")
+
+#add labels
+mds <- left_join(mds, labelJoin, by = "Histology.ICDO3")
+
+rm(labelJoin)
+
+
+
+#parse date of diagnosis
+
+mds$Date.of.Diag <- paste(mds$Month.Diagnosis, "-", mds$Year.Diagnosis)
+
+mds$Date.of.Diag <- parse_date_time(mds$Date.of.Diag, orders = "my")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
