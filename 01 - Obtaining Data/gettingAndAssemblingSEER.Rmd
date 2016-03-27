@@ -1,89 +1,105 @@
 ---
-title: "Getting and assembling SEER data"
+title: "Data Conglomeration: SEER parts into a whole"
 author: "Mustafa Ascha"
-date: "March 2, 2016"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 ---
 
-##Getting SEER data
+```{r options, echo = FALSE}
 
-SEER provides their data in a couple of different ways. We'll focus on downloading and assembling binary data. 
+knitr::opts_chunk$set(echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE, 
+                      eval = FALSE)
+
+```
+
+**Intro:** The Surveillance, Epidemiology, and End Results (SEER) Program provides a lot of potentially useful cancer data. Unfortunately, the data formats are a bit limited at first. 
+
+**Purpose:** To obtain SEER data and combine the 40 provided files into just a few useful files, using R. 
 
 ###Requesting/Downloading the data
 To begin doing anything, you'll have to obtain data. Go to [this page](http://seer.cancer.gov/data/access.html) to request the data and sign their agreement form. 
 
-After returning the agreement form, you'll be linked to [this site](http://seer.cancer.gov/data/options.html). Pick ZIP or exe, whatever you prefer, as long as you download the **ASCII text version of the data**. You'll have to give them your username/pw to download the data, of course.
+After returning the agreement form, you'll be linked to [this site](http://seer.cancer.gov/data/options.html). Pick ZIP or exe, whatever you prefer, as long as you download the *ASCII text version of the data*. You'll have to give them your username/pw to download the data, of course.
 
 Unpack the files, they should be something like 3GB total. You'll probably notice that there are dozens of files, spread across several folders. This...is inconvenient. Fortunately, there's an R package for that! 
 
-###Putting all the files together
+###Installing SEERaBomb  
 
 Thanks to the hard work of researchers at the Cleveland Clinic Foundation, there's an R package that will put those SEER files together. Moreover, you'll have the data in native R format and as a database!
 
-If you're interested in learning more about it, check out the [SEERaBomb page](https://cran.r-project.org/web/packages/SEERaBomb/index.html) at your favorite CRAN mirror. For now, it'll have to suffice to simply *use* the package. 
+If you're interested in learning more about it, check out the [SEERaBomb page](https://cran.r-project.org/web/packages/SEERaBomb/index.html) at your favorite CRAN mirror.  
 
-All the R code on this page will be shown in the HTML version, so don't worry about looking at the source for secrets and tricks. 
+Installing the R package dependencies for SEERaBomb also requires installing a library outside of R, the Open GL Utility, "GLU". Here are some links to install GLU:  
 
-Here, we'll install/load the SEERaBomb package and run the first command for assembling SEER files. 
+- For Ubuntu users: run `sudo apt-get install libglu1-mesa-dev`; for RedHat users, run `yum install Mesa-devel`.   
 
-**Notes**  
-	- You'll want to put the SEER data in the same folder as your active R directory. For the purposes of this document, we'll be working on that assumption.  
-	- Installing one of the dependencies for SEERaBomb also requires installing a library outside of R, the Open GL Utility, "GLU". For Ubuntu users, run `sudo apt-get install libglu1-mesa-dev`; for RedHat users, run `yum install Mesa-devel`. If you're using a Mac, go [here](http://alumni.cs.ucsb.edu/~wombatty/tutorials/opengl_mac_osx.html) for instructions on setting that up. For Windows or several other operating systems, see [here](https://www.opengl.org/documentation/implementations/) for how to install GLU. 
+- If you're using a Mac, go [here](http://alumni.cs.ucsb.edu/~wombatty/tutorials/opengl_mac_osx.html) for instructions.  
 
-```{r SEERaBombStart, message = FALSE, warning = FALSE}
-#if you haven't installed it yet, use this command to install dependencies
+- For Windows (or more detailed instructions for other operating systems), see [here](https://www.opengl.org/documentation/implementations/) for how to install GLU. 
 
-#install.packages(c("LaF",
-#			"RSQLite",
-#			"dplyr",
-#			"XLConnect",
-#			"Rcpp",
-#			"rgl",
-#			"reshape2",
-#			"mgcv",
-#			"DBI",
-#			"bbmle"))
-#install.packages("SEERaBomb")
 
-#library(SEERaBomb)
+If you haven't installed it yet, use this command to install other dependencies
 
-#df <- getFields(seerHome = "SEER_1973_2012_TEXTDATA/")
+```{r SEERaBombInstall}
+install.packages(c("LaF",
+			"RSQLite",
+			"dplyr",
+			"XLConnect",
+			"Rcpp",
+			"rgl",
+			"reshape2",
+			"mgcv",
+			"DBI",
+			"bbmle"))
+
+install.packages("SEERaBomb")
+
+#load the library
+library(SEERaBomb)
 
 ```
 
-The folder, `SEER_1973_2012_TEXTDATA/`, should have a structure along the lines of the following: (bash ls -rf (some tree structure command run from the folder)
+###SEERaBomb Prep Work
 
+The command `getFields` parses out the SAS files to generate a dataframe (without data yet) that contains all of the SEER fields. Use it as follows:
 
-The command `getFields` parses out the SAS files to generate a dataframe (without data yet) that contains all of the SEER fields. The variables
+```{r getFields}
+
+df <- getFields(seerHome = "SEER_1973_2012_TEXTDATA/")
+
+```
 
 This next command will create a dataframe that only extracts those variables that we want. It was intended to allow the user to select variables of interest, allowing for faster and more streamlined work. I used this package with the intention of exploring the data, so I want all the variables! 
 
-```{r SEERaBombPick, message = FALSE, warning = FALSE}
+```{r SEERaBombPick}
 
-#df <- pickFields(sas = df, picks = df$names)
+df <- pickFields(sas = df, picks = df$names)
 
 ```
 
 ![All of them!](allTheVars.jpg)
 
-Finally, we'll go ahead and construct the data. 
+If you want the program to run faster, probably select which variables you'd like. You can do this by substituting a subset of `df$names` in the `picks` option of the previous command.
 
-```{r SEERaBombDoIt, message = FALSE, warning = FALSE}
+Congratulations! You've successfully prepared to put the files together.
 
-#mkSEER(df, seerHome = "SEER_1973_2012_TEXTDATA/")
+###Assemble the files!
+
+The following command will assemble the 40 separate files into four, of which the rest of this tutorial will focus on one. Personally, I ran this command and grabbed a cup of coffee.    
+
+```{r SEERaBombDoIt}
+
+mkSEER(df, seerHome = "SEER_1973_2012_TEXTDATA/")
 
 ```
 
-
-
 Please note that none of these commands are run by this document. Its purpose, rather than executing code, is to demonstrate the code necessary to get started with SEER in R.
 
+####Citations:
 
-
-
-####Citations
-
-```{r cite, message = FALSE, warning = FALSE, echo = FALSE, results = "asis"}
+```{r cite, eval = TRUE, echo = FALSE, results = "asis"}
 
 library(RefManageR)
 

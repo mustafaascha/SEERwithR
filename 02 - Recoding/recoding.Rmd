@@ -1,6 +1,6 @@
 ---
 author: "Mustafa Ascha"
-date: "March 3, 2016"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 ---
 
@@ -8,7 +8,7 @@ output: html_document
 
 The data that SEER provides is a bit cryptic. Here, I'll show you some ways to make it look a little better. 
 
-**Note:** I'm pretty sure that my data use agreement said something about not sharing the data. So I simulated data for the purposes of this project. I made sure to include all of the possible values of categorical variables, so that code in this document will still be useful. 
+**Note:** I'm pretty sure that my data use agreement said something about not sharing the data, so I simulated data for the purposes of this project. I made sure to include all of the possible values of categorical variables, so that code in this document will still be useful. 
 
 
 
