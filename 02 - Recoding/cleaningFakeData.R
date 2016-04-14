@@ -119,7 +119,7 @@ cancFake$firstprm <-
          labels = c("No", "Yes"))
 
 #COD - site recode=========================================
-icd0class <- read.table(file = "../data/site02vComplete.ssv", sep = ";", stringsAsFactors = FALSE, fill = NA)
+icd0class <- read.table(file = "data/site02vComplete.ssv", sep = ";", stringsAsFactors = FALSE, fill = NA)
 
 icd0class <- icd0class %>% select(V1, V5) %>% filter(V5 != "")
 
@@ -136,7 +136,7 @@ names(cancFake)[38] <- "COD.Names"
 rm(icd0class)
 
 #COD - site recode KM=========================================
-icd0class <- read.table(file = "../data/site02vComplete.ssv", sep = ";", stringsAsFactors = FALSE, fill = NA)
+icd0class <- read.table(file = "data/site02vComplete.ssv", sep = ";", stringsAsFactors = FALSE, fill = NA)
 
 icd0class <- icd0class %>% select(V1, V5) %>% filter(V5 != "")
 
@@ -261,7 +261,7 @@ cancFake$srvtimemonflagpa <-
 #add Names to histo3==================================================
 
 #read names
-icdO3codes <- read.csv("../data/icdo3Codes.csv", stringsAsFactors = FALSE)
+icdO3codes <- read.csv("data/icdo3Codes.csv", stringsAsFactors = FALSE)
 
 #figuring out what's called what
 labelJoin <- 
