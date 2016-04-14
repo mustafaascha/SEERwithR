@@ -1,0 +1,29 @@
+---
+author: "Mustafa Ascha"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+#Recoding SEER
+
+The data that SEER provides is a bit cryptic. Here, I'll show you some ways to make it look a little better. 
+
+**Note:** I'm pretty sure that my data use agreement said something about not sharing the data, so I simulated data for the purposes of this project. I made sure to include all of the possible values of categorical variables, so that code in this document will still be useful. 
+
+I would walk through the process of recoding these variables, but it's not very exciting. 
+
+Unfortunately, there's no order to the variables to recode. The script will still run, but I recommend running it interactively to keep track of what's going on. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

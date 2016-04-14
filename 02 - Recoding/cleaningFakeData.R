@@ -78,43 +78,31 @@ cancFake$beho3 <-
 
 #grade=====================================================
 
-cancFake$grade[cancFake$grade == 1] <- "Grade 1"
-
-cancFake$grade[cancFake$grade == 2] <- "Grade 2"
-
-cancFake$grade[cancFake$grade == 3] <- "Grade 3"
-
-cancFake$grade[cancFake$grade == 4] <- "Grade 4"
-
-cancFake$grade[cancFake$grade == 5] <- "T-cell or T-cell precursor"
-
-cancFake$grade[cancFake$grade == 6] <- "B-cell or B-cell precursor"
-
-cancFake$grade[cancFake$grade == 7] <- "Null cell, non-t non-b"
-
-cancFake$grade[cancFake$grade == 8] <- "NK cell"
-
-cancFake$grade[cancFake$grade == 9] <- "Cell type not determined or applicable"]
-
 cancFake$grade <- 
+  factor(cancFake$grade, 
+         levels = c(1:9), 
+         labels = c("Grade 1", 
+                    "Grade 2", 
+                    "Grade 3", 
+                    "Grade 4", 
+                    "T-cell or T-cell precursor",
+                    "B-cell or B-cell precursor",
+                    "Null cell, non-t non-b",
+                    "NK cell",
+                    "Indeterminate"))
 
 #behavior recode for analysis==============================
 
-cancFake$behanal[cancFake$behanal == 0] <- "Benign"
-
-cancFake$behanal[cancFake$behanal == 1] <- "Borderline Malignant"
-
-cancFake$behanal[cancFake$behanal == 2] <- "In situ"
-
-cancFake$behanal[cancFake$behanal == 3] <- "Maignant"
-
-cancFake$behanal[cancFake$behanal == 4] <- "Only malignant in ICDO3"
-
-cancFake$behanal[cancFake$behanal == 5] <- "No longer reportable in ICDO3"
-
-cancFake$behanal[cancFake$behanal == 6] <- "Only malignant 2010+"
-
-cancFake$behanal
+cancFake$behanal <- 
+  factor(cancFake$behanal, 
+         levels = c(0:6),
+         labels = c("Benign",
+                    "Borderline Malignant",
+                    "In situ",
+                    "Malignant",
+                    "Only malignant according to ICDO3",
+                    "No longer reportable in ICDO3",
+                    "Only malignant after 2010"))
 
 #stage=========================================================
 
@@ -125,9 +113,10 @@ cancFake$hststga <-
 
 #first primary=============================================
 
-cancFake$firstprm[cancFake$firstprm == 0] <- "No"
-
-cancFake$firstprm[cancFake$firstprm == 1] <- "Yes"
+cancFake$firstprm <- 
+  factor(cancFake$firstprm, 
+         levels = c(0,1),
+         labels = c("No", "Yes"))
 
 #COD - site recode=========================================
 icd0class <- read.table(file = "../data/site02vComplete.ssv", sep = ";", stringsAsFactors = FALSE, fill = NA)
@@ -165,61 +154,80 @@ rm(icd0class)
 
 #vital status================================================
 
-cancFake$statrec[cancFake$statrec == 1] <- "Alive"
-
-cancFake$statrec[cancFake$statrec == 4] <- "Dead"
+cancFake$statrec <- 
+  factor(cancFake$statrec, 
+         levels = c(1, 4), 
+         labels = c("Alive",
+                    "Passed Away"))
 
 #dthclass===================================================
 
-cancFake$dthclass[cancFake$dthclass == 0] <- "Alive or Dead of other cause"
-
-cancFake$dthclass[cancFake$dthclass == 1] <- "Dead"
-
-cancFake$dthclass[cancFake$dthclass == 9] <- "NA - not first tumor"
+cancFake$dthclass <-
+  factor(cancFake$dthclass, 
+         levels = c(0, 1, 9), 
+         labels = c("Alive or Dead of other cause",
+                    "Passed Away",
+                    "NA - not first tumor"))
 
 #other dth class===================================================
 
-cancFake$odthclass[cancFake$odthclass == 0] <- "Alive or Dead due to cancFakeer"
-
-cancFake$odthclass[cancFake$odthclass == 1] <- "Dead"
-
-cancFake$odthclass[cancFake$odthclass == 9] <- "NA - not first tumor"
+cancFake$odthclass <- 
+  factor(cancFake$odthclass, 
+         levels = c(0, 1, 9), 
+         labels = c("Alive or dead due to cancer",
+                    "Passed Away",
+                    "NA - not first cancer"))
 
 #intprim===================================================
 
-cancFake$intprim[cancFake$intprim == 0] <- "No"
-
-cancFake$intprim[cancFake$intprim == 1] <- "Yes"
-
-cancFake$intprim[cancFake$intprim == 9] <- "Behavioral exclusion"
+cancFake$intprim <- 
+  factor(cancFake$intprim, 
+         levels = c(0, 1, 9),
+         labels = c("No", "Yes", 
+                    "Behavioral exclusion"))
 
 #radiatn================================================
 
-cancFake$radiatn[cancFake$radiatn == 0] <- "None"
-cancFake$radiatn[cancFake$radiatn == 1] <- "Beam Radiation"
-cancFake$radiatn[cancFake$radiatn == 2] <- "Radioactive Implants"
-cancFake$radiatn[cancFake$radiatn == 3] <- "Radioisotops"
-cancFake$radiatn[cancFake$radiatn == 4] <- "Beam and implants or isotopes"
-cancFake$radiatn[cancFake$radiatn == 5] <- "Radiation NOS"
-cancFake$radiatn[cancFake$radiatn == 6] <- "Other Radiation"
-cancFake$radiatn[cancFake$radiatn == 7] <- "Refused Radiation"
-cancFake$radiatn[cancFake$radiatn == 8] <- "Recommended, Admin Unknown"
-cancFake$radiatn[cancFake$radiatn == 9] <- "Unknown if admin"
+cancFake$radiatn <- 
+  factor(cancFake$radiatn, 
+         levels = c(0:9), 
+         labels = c("None",
+                    "Beam Radiation",
+                    "Radioactive Implants",
+                    "Radioisotops",
+                    "Beam and implants or isotopes",
+                    "Radiation NOS",
+                    "Other Radiation",
+                    "Refused Radiation",
+                    "Recommended, Admin Unknown",
+                    "Unknown if admin"))
 
 #radiation to cns=======================================
 
-cancFake$radbrn[cancFake$radbrn == 0] <- "None"
-cancFake$radbrn[cancFake$radbrn == 1] <- "Radiation"
-cancFake$radbrn[cancFake$radbrn == 7] <- "Refused"
-cancFake$radbrn[cancFake$radbrn == 8] <- "Recommended, Admin Unknown"
-cancFake$radbrn[cancFake$radbrn == 9] <- "Unknown"
+cancFake$radbrn <- 
+  factor(cancFake$radbrn, 
+         levels = c(0,1, 7, 8, 9), 
+         labels = c("None",
+                    "Radiation",
+                    "Refused",
+                    "Recommended, Admin Unknown",
+                    "Unknown"))
+
+#nosurg=================================================
+
+canc$nosurg <- 
+  factor(ifelse(canc$nosurg == 0, "Surgery Performed", 
+                "No Surgery"))
 
 #typefu================================================
 
-cancFake$typefup[cancFake$typefu == 1] <- "Autopsy or Death Cert"
-cancFake$typefup[cancFake$typefu == 2] <- "Active FU"
-cancFake$typefup[cancFake$typefu == 3] <- "In situ of cervix only"
-cancFake$typefup[cancFake$typefu == 4] <- "Case only now in FU"
+cancFake$typefup <- 
+  factor(cancFake$typefup, 
+         levels = c(1:4),
+         labels = c("Autopsy or Death Certificate",
+                    "Active FU",
+                    "In situ of cervix only",
+                    "Case only now in FU"))
 
 #surv===================================================
 
@@ -270,12 +278,31 @@ mds <- left_join(mds, labelJoin, by = "Histology.ICDO3")
 
 rm(labelJoin)
 
+#finally, make the names look nicer
+
+varNames <- read.csv("data/seerabombVarNames.csv", stringsAsFactors = FALSE)
+
+varNames <- varNames[,c(4,5)]
+
+varNames$desc <- 
+        paste(
+        str_replace_all(string = 
+                          str_replace_all(string = varNames[,2], 
+                                          pattern =  "[^A-Za-z0-9]", 
+                                          replacement = "\\."), 
+                        pattern = "\\.{2}",
+                        replacement = ""))
+
+#cull
+varNames <- varNames[which(names(cancFake) %in% varNames$SEERaBomb),]
 
 
+#find matching names
+matchingNames <- match(names(cancFake), varNames$SEERaBomb)
 
-
-
-
+#match them! but only match the ones that actually exist!
+names(cancFake)[is.na(matchingNames) == FALSE] <- 
+  varNames$desc[matchingNames[which(is.na(matchingNames) == FALSE)]]
 
 
 
