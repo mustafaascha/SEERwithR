@@ -82,7 +82,7 @@ df <- pickFields(sas = df, picks = df$names)
 
 ```
 
-![All of them!](./data/allTheVars.jpg)
+![All of them!](data/allTheVars.jpg)
 
 If you want the program to run faster, probably select which variables you'd like. You can do this by substituting a subset of `df$names` in the `picks` option of the previous command.
 
