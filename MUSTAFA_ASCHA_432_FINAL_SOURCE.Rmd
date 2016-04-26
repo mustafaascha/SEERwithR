@@ -1,0 +1,1354 @@
+---
+title: 'Development of a Second Cancer after Diagnosis of Breast Cancer: An EPBI432
+  Final Project'
+author: "Mustafa Ascha"
+date: "April 26, 2016"
+output:
+  pdf_document:
+    keep_tex: yes
+    toc: yes
+    toc_depth: 2
+  html_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+\pagebreak
+
+#Abstract
+
+##Background 
+
+Development of cancer after a previous diagnosis of cancer can be devastating,
+especially for those people whose cancer went into remission. The following
+project seeks to use SEER data to understand what impact various first-cancer
+characteristics and treatments have on development of a second cancer.
+
+##Methods  
+
+Two approaches are taken to achieve this goal: (1) logistic regression where second cancer development is the outcome, and (2) survival analysis where second cancer development is the event. Predictors were initially selected on the basis of their suitability for model building, such that variables meant to be used for cohort construction (e.g. type of cancer) were not used as predictors. Models were first fitted by use of every pre-selected predictor, and a second model evaluated. Diagnostics and validation were performed, both in- and out-of-sample. 
+
+##Conclusions  
+
+The development of a second cancer after an initial diagnosis of breast cancer largely happens within the span of about 100 months. Distant metastases of cancer, certain cancer morphologies, and some grades of cancer appear to increase the odds or rate of second cancer development. Radiation treatment is associated with significantly decreased odds and rate of second cancer development, a finding that may be supported biologically by successful treatment decreasing the chance of cancer spreading to other areas of the body. 
+
+The next direction to move from this conclusion would be to match patients to see if the effect of radiation on second cancer development remains. 
+
+
+\pagebreak 
+```{r setup, include=FALSE}
+#set knitr options
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, error = FALSE, echo = FALSE)
+
+#load libraries
+library(tableone)
+library(survival)
+library(lubridate)
+library(pROC)
+library(stringr)
+library(Hmisc)
+library(pander)
+library(rms)
+library(ggplot2)
+library(ggfortify)
+library(dplyr)
+
+#set pander options
+panderOptions('table.emphasize.rownames', FALSE)
+
+panderOptions('table.alignment.default', 'left')
+
+panderOptions('round', 3)
+
+#load data
+load("data/FPData.Rdata")
+
+levels(bcfp$MultipleCancerDx) <- c("Only One Cancer", "Second Cancer")
+
+#use this to produce summaries of odds ratios, if rms isn't available
+logModSum <- function(model) {
+  cbind(
+    exp(cbind(
+      OR = coef(model), 
+      confint(model))),
+    P = summary(model)$coefficients[,4])
+}
+
+rmseAndMae <- function(actual, predicted) {
+  sprintf("The RMSE is %.2f and the MAE is %.2f", 
+          rmse(actual = actual, predicted = predicted), 
+          mae(actual = actual, predicted = predicted))
+}
+
+```
+
+#I. Logistic Regression Project Instruction Answers
+
+##1. Table One 
+
+*Provide a Table 1 that describes the predictors in your final model, broken down by the levels of your outcome variable.*
+
+```{r tableone, results = 'hide'}
+
+
+tableO <- print(CreateTableOne(data = bcfp, 
+                      vars = c("Race", 
+                               "Sex", 
+                               "Age.At.Diagnosis",
+                               "Metastasis",
+                               "Morphology",
+                               "Grade",
+                               "Radiation"), 
+                      strata = "MultipleCancerDx" 
+                      ))
+
+
+```
+
+```{r tableoneprint}
+
+pander(tableO, caption = "Descriptions of predictors stratified by
+       people who did not and did develop a second cancer")
+
+```
+
+
+
+
+##2. Spending Degrees of Freedom 
+
+*How did you make decisions about spending the degrees of freedom that you spent?*
+
+ I'm not sure
+whether I can use the full number of observations that are available or the
+subset that I'll use to build a model, to calculate `Number of Observations /
+Number of Variables to Include`. Either way, my use of degrees of freedom is not
+limited by the number of observations that are available--in this sense, I am
+rich in degrees of freedom to spend.
+
+
+##3. Model Selection Methods 
+
+*What approach(es) did you use in selecting your model? How well did they work?*
+
+My model was developed for its explanatory value, so I used all of the variables.
+
+I did make a Spearman Rho-Squared plot to see whether there were good predictors on which to spend additional degrees of freedom, and found that I could use a restricted cubic spline on age at diagnosis as well as an interaction between two potentially-related variables (metastasis and grade).
+
+On calculation of variance inflation factors, it appeared that there was a LOT of collinearity in the model including the RCS and interaction terms. So, I remade the model without the RCS and interaction terms and evaluated the two against each other using analysis of deviance. 
+
+
+##4. Interpreting Odds and Probabilities 
+
+*How do you interpret your results in terms of probabilities or odds, rather than log odds?*
+
+```{r answeringQuestions}
+
+#make code reproducible
+set.seed(431432)
+
+#make a model dataframes using the previous vector of numbers
+bcfpModTrain <- sample_n(bcfp, 4e4) %>% select(MultipleCancerDx,
+                                                      Case.Number,
+                                                      Race, 
+                                                      Sex,
+                                                      Age.At.Diagnosis,
+                                                      Metastasis,
+                                                      Morphology,
+                                                      Grade,
+                                                      Radiation,
+                                                      Size)
+
+
+#because LRM doesn't accept non-numeric levels for ordinal variables
+levels(bcfpModTrain$Grade) <- c(1, 2, 3, 4) 
+levels(bcfpModTrain$Metastasis) <- c(1, 2, 3)
+
+dd <- datadist(bcfpModTrain)
+
+options(datadist = "dd")
+
+#this is the final selected model, so it has no interactions
+modelLRM <- lrm(MultipleCancerDx ~ Race +
+                                   Sex +
+                                   Age.At.Diagnosis +
+                                   scored(Metastasis) +
+                                   Morphology + 
+                                   scored(Grade) +
+                                   Radiation +
+                                   Size,
+                data = bcfpModTrain, x = TRUE, y = TRUE
+                  )
+
+#plot(summary(modelLRM))
+
+```
+
+***
+
+\pagebreak
+
+
+#II. Logistic Regression Model Development
+
+For the purposes of this project, I will be limiting myself to a sample set
+of forty thousand observations to develop a logistic regression model. This is
+about 5% of my total sample size, so there is ample room for out-of-training
+validation.
+
+##Spearman Rho-Squared
+
+Before selecting predictors, I will look at a spearman $\rho^2$ plot to see
+if I should use any interaction, polynomial, or restricted cubic spline methods
+on predictors.
+
+```{r spearmanPlot}
+
+plot(spearman2(MultipleCancerDx ~ Race + 
+                 Sex +
+                 Age.At.Diagnosis + 
+                 Metastasis +
+                 Morphology +
+                 Grade + 
+                 Radiation + 
+                 Size, data = bcfp))
+
+```
+
+Age at diagnosis appears to be very important, based on its p-value. 
+
+Because `Grade` can realte to `Metastasis`, I'll add an interaction term between
+the two. To visualize this potential interaction, here is a plot:
+
+```{r gradeMetInteraction}
+
+levels(bcfp$Grade) <- c("Grade 1",
+                        "Grade 2",
+                        "Grade 3",
+                        "Grade 4")
+
+ggplot(data = sample_n(bcfp, 5e4), aes(x = Metastasis, y = Grade)) + 
+  geom_point(aes(color = MultipleCancerDx), position = "jitter", 
+             alpha = I(1/5)) +
+  ggtitle("Grade against Metastasis")
+
+```
+
+This doesn't seem like a perfectly random association between categories, so
+I'll include an interaction term between the two variables. I'll also include a
+restricted cubic spline on age at diagnosis because the longer someone is alive,
+the longer the amount of time that they have to develop a second cancer.
+
+As previously mentioned, missingness isn't an issue outside of the variable
+`Surgery`. Missingness in any other variable accounts for less than 5% of the
+total number of observations, with the exception of the variables specifically
+for people who developed a second cancer. 
+
+Next, I'll make the models. 
+
+```{r makeLogisticModels}
+
+#make code reproducible
+set.seed(431432)
+
+#remake a model dataframes using the previous vector of numbers
+  #this will allow descriptive labeling of ordered factors, as
+  #opposed to the nondescript numeric labels required by lrm
+bcfpModTrain <- sample_n(bcfp, 4e4) %>% select(MultipleCancerDx,
+                                                      Case.Number,
+                                                      Race, 
+                                                      Sex,
+                                                      Age.At.Diagnosis,
+                                                      Metastasis,
+                                                      Morphology,
+                                                      Grade,
+                                                      Radiation,
+                                                      Size)
+
+#make a GLM model with interactions
+modelGLMInt <- glm(MultipleCancerDx ~ Race +
+                                     Sex +
+                                     rcs(Age.At.Diagnosis,4) +
+                                     ordered(Metastasis)*ordered(Grade) +
+                                     Morphology + 
+                                     Radiation +
+                                     Size,
+                  data = bcfpModTrain, family = "binomial"
+                    )
+
+
+
+```
+
+##Collinearity   
+
+Because I've used several interactions and an rcs, and because the severity
+(`Grade`) of cancer is known to be associated with its chance of metastasizing,
+I'll take a quick look at variance inflation factors (VIFs) to make sure there's
+no glaring issue with collinearity.
+
+```{r vifTable}
+
+vifGLM <- vif(modelGLMInt)
+
+pander(vifGLM, caption = "Table of variance inflation factors of each predictor")
+
+```
+
+This is an issue. There are several VIFs that exceed a value of 5, and several
+that exceed 5 by an order of magnitude.
+
+I'll make a new model without the interactions or restricted cubic splines and
+see which performs better on analysis of deviance.
+
+```{r modelNoInts}
+
+#make a model without interactions
+modelGLMNoInt <- glm(MultipleCancerDx ~ Race +
+                                     Sex +
+                                     Age.At.Diagnosis +
+                                     ordered(Metastasis) + 
+                                     ordered(Grade) +
+                                     Morphology + 
+                                     Radiation +
+                                     Size,
+                  data = bcfpModTrain, family = "binomial"
+                    )
+
+modelLRMNoInt <- modelLRM
+
+```
+
+##How do these models compare in ANOVA or Likelihood Ratio Tests?
+
+To help choose between the models including and not including interactions, 
+here are the results of an analysis of deviance:
+
+```{r modelANOVAComparison, results = 'asis'}
+
+anovaTable <- anova(modelGLMInt, modelGLMNoInt, test = "LRT")
+
+pander(anovaTable)
+
+```
+
+It looks like the interaction and restricted cubic splines offer negligible
+predictive value. So, I'll stick with the model that doesn't have either of
+those features.
+
+```{r modelChosen}
+
+modelGLM <- modelGLMNoInt
+
+```
+
+
+\pagebreak
+
+##Logistic Regression Summary
+
+Following are descriptions of the model predicting second cancer development.
+Note, this is the model that has no interaction effects included.
+
+Model summary data is presented on the next page. 
+
+```{r ModelKS}
+
+glmSum <- summary(modelGLM)
+
+#make rows with significant p-values bold
+sumBold <- which(glmSum$coefficients[,4] <= 0.05)
+emphasize.strong.rows(sumBold[-1] - 1)
+
+pander(glmSum, caption = "Coefficients for model predicting 
+       second cancer development")
+
+```
+
+\pagebreak
+
+##Logistic Regression Odds Ratios:
+
+```{r modelKSOR, dresults = 'hide'}
+
+glmORS <- logModSum(modelGLM)
+
+```
+
+
+```{r ModelKSOR}
+
+pander(glmORS, caption = "Odds Ratios for Model Predictors")
+
+```
+
+Looking at the odds ratios, age and intraductal and lobular in situ carcinoma
+morphology are associated with increased odds of developing a second cancer.
+On the other hand, races that are not white or black and the use of radiation
+treatment are apparently associated with decreased odds of developing a second
+cancer.
+
+\pagebreak
+
+##What does an ANOVA of this model say? 
+
+Here's an analysis of deviance for the chosen model: 
+
+```{r anovaModel}
+
+anovaTableFin <- anova(modelGLM, test = "LRT")
+
+pander(anovaTableFin)
+
+```
+
+It appears that several of the predictors are statistically significant.
+Specifically, race, age at diagnosis, grade, morphology, and radiation are all
+statistically significant.
+
+
+##How does this model look according to summary statistics?
+
+The p-value of the overall model is as close to zero as R can go, and I expect5
+this might not be too useful a measure of performance because having so many
+observations probably drives this p-value down.
+
+The Nagelkerke's R^2 is `r sprintf("%.3f", modelLRM$stats[10])`, indicating that
+this model accounts for very little of the variation in response.
+
+The Brier score is `r sprintf("%.3f", modelLRM$stats[11])`, which doesn't have
+much predictive power. 
+
+The model has a C-statistic of `r sprintf("%.3f", modelLRM$stats[6])`, which is
+also pretty low. Here's an ROC curve, where the C-statistic is equal to the area
+under the curve:
+
+```{r ROCcurve}
+
+rocModelGLM <- roc(bcfpModTrain$MultipleCancerDx ~ predict(modelGLM, type = "response"))
+
+plot(rocModelGLM, main = "ROC for Training Data")
+
+```
+
+##How does this perform in diagnostic tests? 
+
+Here's a calibration plot to show how our model compares to the observed
+probabilities used to create the model: 
+
+```{r caliplot}
+
+plot(calibrate(modelLRM))
+
+```
+
+The model seems to perform fine between probabilities of 0.6 and 0.11. For
+probabilities greater than 0.12, it looks like the curve loses predictive value
+by an increasingly wide margin.
+
+In section I of this document, I mentioned concern about a possible interaction
+between `Grade` and `Metastasis`. Here's an interaction plot to see how that
+turned out:
+
+```{r gradeMetaInteraction}
+
+with(bcfpModTrain, 
+     interaction.plot(x.factor = Grade, 
+                      trace.factor = Metastasis, 
+                      response = predict(modelGLM, type = "response"), 
+                      main = "Interaction plot for probability of second 
+cancer against grade and metastasis", 
+                      ylab = "Predicted Probability of Second Cancer",
+                      legend = FALSE) 
+                      )
+legend("topright", 
+       c("Localized", "Regional", "Distant"), 
+       lty = c(3, 2, 1))
+
+```
+
+It looks like there might be an interaction, where metastasis-stratified probability
+values converge as grade increases. This possible interaction is not visually significant
+enough to address.
+
+
+Let's see what diagnostic plots have to say about possible influential observations: 
+
+```{r diagnosticPlots}
+
+plot(modelGLM, which = 5)
+
+```
+
+There are several high-leverage points, but none of them have major values for
+residuals. This is acceptable. 
+
+
+Here are results from cross-validation of the model: 
+
+```{r validate, results = 'asis'}
+
+validatedLRM <- validate(modelLRM)
+
+pander(matrix(validatedLRM[1:11,], 
+                    nrow = 11, 
+                    ncol = 6, 
+                    dimnames = dimnames(validatedLRM)), 
+       caption = "40-fold validation of the model")
+
+```
+
+Corrected indices do change. For Dxy and Nagelkerke's R^2, the change is less
+than ten percent of the previous value, which isn't too bad. However, the
+intercept decreases by 0.137, which might indicate the fit won't perform as well
+on new data.
+
+##How can we understand this plot visually?  
+
+For fun, here's a plot of the distribution of age at diagnosis, according to
+development of a second cancer: 
+
+```{r ageSecond}
+
+ggplot(bcfpModTrain, aes(x = Age.At.Diagnosis, 
+    fill = MultipleCancerDx)) + geom_histogram() + 
+    geom_vline(xintercept = mean(bcfpModTrain$Age.At.Diagnosis)) + 
+    ggtitle("Distribution of Ages in Training Data,\n broken down by Second Cancer Development") + 
+    theme(plot.title = element_text(lineheight=1)) + theme_bw()
+  
+
+```
+
+Consistent with the model, it looks like age greater than the
+mean is associated with increased rates of developing a second cancer.
+
+Here's a bubble plot looking at `Morphology` vs `Age.At.Diagnosis`. The larger the bubble, the higher the probability of developing a second cancer. 
+
+```{r bubbleMorphAge}
+
+#make a dataframe containing equal numbers of each level of a factor
+pullEqualObs <- function(var, df) {
+  sampler <- function(x) {
+    sample_n(df %>% filter(var == levels(var)[x]), 40)
+  }
+  do.call(what = rbind, args = lapply(1:length(levels(var)), function(x) sampler(x)))
+}
+
+#make a dataframe with equal numbers of each factor
+bubbleDF <- pullEqualObs(bcfpModTrain$Morphology, bcfpModTrain)
+
+#make a model using bubbleDF
+bubbleModel <- glm(MultipleCancerDx ~ Race +
+                                     Sex +
+                                     Age.At.Diagnosis +
+                                     ordered(Metastasis) + 
+                                     ordered(Grade) +
+                                     Morphology + 
+                                     Radiation +
+                                     Size,
+                  data = bubbleDF, family = "binomial"
+                    )
+
+probs <- predict(bubbleModel, type = "response")
+
+symbols(bubbleDF$Morphology[seq(1, 280, 5)], 
+        bubbleDF$Age.At.Diagnosis[seq(1, 280, 5)], 
+        circles = probs[seq(1, 280, 5)], 
+        main = "Bubble Plot for Probability 
+of Multiple Cancers", 
+        xlab = "Morphology",
+        ylab = "Age At Diagnosis (Years)")
+
+pander(print(levels(bcfpModTrain$Morphology)), caption = "Levels of the Morphology Variable")
+```
+
+The previous plot shows the predicted probability of developing a second cancer as proportional to the diameter of each circle, where each circle corresponds to an observation represented by its x- and y-axis values. 
+
+As an example, for the sixth level of morphology, at the age of 90, there is a much larger probability of developing a second cancer than there is for someone at 38 years old. 
+
+
+\pagebreak
+
+##How does the model perform on real data? 
+
+Here is an ROC curve for new data:
+
+```{r testing}
+
+trainingCaseNos <- bcfpModTrain$Case.Number
+
+newdata <- bcfp[!(bcfp$Case.Number %in% trainingCaseNos),] %>% 
+                                               select(MultipleCancerDx,
+                                                      Race, 
+                                                      Sex,
+                                                      Age.At.Diagnosis,
+                                                      Metastasis,
+                                                      Morphology,
+                                                      Grade,
+                                                      Radiation,
+                                                      Size) %>% 
+                                          sample_n(1e4)
+
+predictedVals <- predict(modelGLM, newdata = newdata, type = "response")
+
+plot(roc(newdata$MultipleCancerDx, predictedVals), main = "ROC for New Data")
+
+```
+
+The AUC using this new data is
+`r sprintf("%.3f", auc(newdata$MultipleCancerDx, predictedVals))`,
+which corresponds nicely to the validated AUC of
+`r sprintf("%.3f", 0.5 + validatedLRM[1,5]/2)`.
+
+
+Overall, the model isn't so great. It does, however, point out the impact of
+some of its predictors on the development of a second caner, and it was fun.
+
+***
+
+```{r intermissionCleanup}
+
+rm(anovaTable, 
+   bcfpModTrain,
+   glmORS,
+   newdata,
+   tableO,
+   dd,
+   modelGLMInt,
+   modelGLMNoInt,
+   modelLRMNoInt,
+   predictedVals,
+   vifGLM,
+   anovaTableFin,
+   rocModelGLM,
+   sumBold,
+   trainingCaseNos,
+   validatedLRM,
+   glmSum)
+
+```
+
+
+#III. Survival Analysis
+
+```{r makingSurvival, echo = TRUE}
+
+#retype the dates for easier handling
+bcfp$Date.of.Diag.1 <- 
+   parse_date_time(bcfp$Date.of.Diag, order = "my")
+
+bcfp$Date.of.Diag.2 <-
+  parse_date_time(bcfp$Two.Date.of.Diag, order = "my")
+
+#make an interval between the dates
+bcfp$TimeToSecondCancer <- with(bcfp, interval(start = Date.of.Diag.1, end = Date.of.Diag.2))
+  
+#convert the interval to years, then divide by 12 to get months. 
+  #I divide by twelve because months have different numbers of days,
+    #but years always have the same number of months. 
+#the value 364.75 is used because every fourth year has 364 days
+  #this will introduce less issues than the difference in days of months, 
+    #overall
+bcfp$TTSCMonths <- 
+  (bcfp$TimeToSecondCancer@.Data * 12) / (60 * 60 * 24 * 364.75)
+
+#make a time variable to use for analysis
+  #this uses duration of survival for people who died without developing 
+  #a second cancer,
+    #and uses time to second cancer for those who did develop a second cancer
+bcfp$timeCPH <- 
+  ifelse(is.na(bcfp$TTSCMonths) == TRUE, 
+         bcfp$Survival.Months, 
+         bcfp$TTSCMonths)
+
+#give time units
+units(bcfp$time) <- "Months"
+
+#next, I'll make a censor variable for those people who died
+bcfp$censor <- 
+  ifelse(is.na(bcfp$TTSCMonths) == TRUE, 0, 1)
+
+#for reproducability
+set.seed(432431)
+
+#again, time to subset the data for model training
+bcfpModTrain <- sample_n(bcfp, 4e4) %>% select(MultipleCancerDx,
+                                               Race,
+                                               Sex,
+                                               Age.At.Diagnosis, 
+                                               Metastasis, 
+                                               Grade, 
+                                               Morphology,
+                                               Radiation, 
+                                               Size, 
+                                               timeCPH,
+                                               censor, 
+                                               Case.Number)
+
+bcfpSurv <- with(bcfpModTrain, Surv(time = timeCPH, event = censor, type = "right"))
+
+#here, I'll make the model
+bcfpSFit <- survfit(bcfpSurv ~ 1)
+```
+
+The following responses refer to a survival analysis described in Section IV.
+
+##1. Table One 
+
+*Provide a Table 1 that describes the predictors in your final model, broken down by the levels of your outcome variable.*
+
+Please see Table 1 in Section I. 
+
+
+##2. Assessing K-M Estimates Across Groups 
+
+*Plot and assess the pair of Kaplan-Meier estimates comparing intervention groups*
+
+###Radiation 
+
+Here is a plot of Kaplan-Meier estimates comparing groups that did and did not
+receive radiation treatment: 
+
+```{r KMPlotRad}
+
+bcfpFitRad <- survfit(bcfpSurv ~ Radiation, data = bcfpModTrain)
+
+autoplot(bcfpFitRad) + 
+  ggtitle("Kaplan-Meier Estimate of Survival According to Radiation Treatment") + 
+  xlab("Time in Months") + 
+  ylab("Proportion Survival") + 
+  theme_bw()
+
+```
+
+Interestingly, it looks like the group that received radiation had a lower
+chance of developing a second cancer. Here's a quantitative approach to 
+evaluating this difference: 
+
+
+```{r survRadDiff, results = 'asis'}
+
+sradd <- survdiff(Surv(time = timeCPH, event = censor) ~ Radiation, data = bcfpModTrain)
+
+pander(sradd)
+
+```
+
+A log-rank test indicates that there is, indeed, a difference between groups who
+were and were not exposed to radiation as a treatment for cancer.
+
+
+##Race  
+
+```{r KMPlotRace}
+
+bcfpFitRace <- survfit(bcfpSurv ~ Race, data = bcfpModTrain)
+
+autoplot(bcfpFitRace) + 
+  ggtitle("Kaplan-Meier Estimate of Survival According to Race") + 
+  xlab("Time in Months") + 
+  ylab("Proportion Survival") + 
+  theme_bw()
+
+```
+
+Interestingly, it looks like the group that received radiation had a lower
+chance of developing a second cancer. Here's a quantitative approach to 
+evaluating this difference: 
+
+
+```{r survRaceDiff, results = 'asis'}
+
+srd <- survdiff(Surv(time = timeCPH, event = censor) ~ Race, data = bcfpModTrain)
+
+pander(srd)
+
+```
+
+A log-rank test indicates that there is no statistically significant difference in survival across race. 
+
+###Metastasis
+
+```{r KMPlotMets}
+
+bcfpFitMets <- survfit(bcfpSurv ~ Metastasis, data = bcfpModTrain)
+
+autoplot(bcfpFitMets) + 
+  ggtitle("Kaplan-Meier Estimate of Survival According to Metastasis") + 
+  xlab("Time in Months") + 
+  ylab("Proportion Survival") + 
+  theme_bw()
+
+```
+
+```{r survMetsDiff, results = 'asis'}
+
+smd <- survdiff(Surv(time = timeCPH, event = censor) ~ Metastasis, data = bcfpModTrain)
+
+pander(smd)
+
+```
+
+By the log-rank test, there is a very statistically significant difference
+across metastasis groups, where distant metastasis is associated with decreased
+survival. 
+
+
+###Grade
+
+```{r KMPlotGra}
+
+bcfpFitGra <- survfit(bcfpSurv ~ Grade, data = bcfpModTrain)
+
+autoplot(bcfpFitGra) + 
+  ggtitle("Kaplan-Meier Estimate of Survival According to Grade") + 
+  xlab("Time in Months") + 
+  ylab("Proportion Survival") + 
+  theme_bw()
+
+```
+
+```{r survGraDiff, results = 'asis'}
+
+sgd <- survdiff(Surv(time = timeCPH, event = censor) ~ Grade, data = bcfpModTrain)
+
+pander(sgd)
+
+```
+
+By the log-rank test, there is a very statistically significant difference
+across Grade groups, where people who have grade 3 cancer appear to survive at a
+greater proportion than expected.
+
+##3. Model Selection 
+
+*What approach(es) did you use in selecting your Cox model? How well did they work?*
+
+I did stepwise forward selection. The approach didn't work too well, I found that the 
+selected model was just as good as the kitchen sink model except for the pruning of 
+insignificant predictors (whose effect was minimized by the model, anyway). 
+
+##4. Meeting Assumptions 
+
+*How well does your Cox model match up with the proportional hazards assumption?*   
+
+The p-values provided by the output of my cox.zph command are really concerning. They're really low, 
+indicating significant slope of residuals. However, I would expect such low p-values, considering the
+number of observations available to me. 
+
+Looking at rho values, the biggest issue was the predictor `Radiation`. I plotted the survival curve fit
+for this variable alone, and the curves did, indeed, meet towards the end of the survival time maximum. 
+
+***
+
+#IV. Survival Analysis Development
+
+##Setting up data for survival analysis
+
+The event under consideration for this project is development of a second
+cancer. SEER provides a date of diagnosis for each record of cancer, where
+records of cancer are created for each new cancer found in a patient. The ID
+number, Case.Number, then can be used to identify individuals with more than
+one record in SEER. Further, a separate variable, "Sequence Number" (processed
+out of the data before use in this data set), can be used to identify whether
+this is the first, second, third, or so on cancer that a patient may have.
+
+For the purposes of this study, survival time will be defined as the interval
+between record of a first and second cancer. Patients will be considered
+censored if they die, and thus will be dropped out of the study.
+
+To improve the accuracy of the dataset, observations will be kept only if the
+date of last contact is greater than the date of diagnosis. The rates of each
+possible follow-up interval are described for each population in the following
+tables:
+
+```{r tableFU, results = 'asis'}
+
+bcfp$MCDBin <- ifelse(bcfp$MultipleCancerDx == "Second Cancer", 1, 0)
+
+pander(table(bcfp$Survival.Flag, bcfp$MultipleCancerDx), 
+       caption = "Types of Follow-up Distribution Across Outcome")
+
+```
+
+Looking at the distributions of follow-up times among patients who did and did
+not develop second cancers, each group is within about an order of magnitude
+difference of the other. I will take this as evidence that including only those
+patients with follow-up beyond the date of diagnosis will not introduce too much
+bias.
+
+##Making Cox Proportional Hazards Models
+
+```{r cphmod}
+
+modelCoxPH <- coxph(Surv(time = timeCPH, event = censor) ~ Race + 
+                                                        Sex + 
+                                                        Age.At.Diagnosis + 
+                                                        ordered(Metastasis) + 
+                                                        ordered(Grade) + 
+                                                        Morphology +
+                                                        Radiation + 
+                                                        Size, 
+                    data = bcfpModTrain)
+
+```
+
+```{r coxPHPrint, results = 'asis'}
+
+coxphSum <- summary(modelCoxPH)
+
+pander(coxphSum$conf.int, caption = "Hazards and Confidence Intervals for the Cox Proportional Hazards Model")
+
+pander(coxphSum$concordance, caption = "Concordance for the Cox Proportional Hazards Model")
+
+pander(coxphSum$waldtest, caption = "Wald Test results for the Cox Proportional Hazards Model")
+
+```
+
+As seen above, distant metastasis is associated with 1.5 times hazard of developing a second cancer, and regional metastasis is also associated with increased hazard. Also as shown above, Grade 3 cancer is associated with decreased hazard of developing a second cancer. Finally, radiation is also associated with decreased hazard of developing a second cancer, at about a 0.77 rate compared to patients not treated with radiation. P-values correspond to these explanations of significance, which are mentioned if the 95% confidence interval of hazard does not cross 1. 
+
+The Wald test for this model shows that, overall, the model is statistically significant. 
+
+Because there is a continuous predictor in the model, I included the measure of concordance. At 
+`r sprintf("%.3f", coxphSum$concordance[[1]])`, which is a little less than typical for survival analysis data. This means that there is some agreement between the survival time and risk score generated by the predictor, but it's not perfect. 
+
+The Cox-and-Snell's pseudo-R-squared value for the overall model is `r sprintf(".3f", coxphSum$rsq[[1]])`, which indicates that the fit isn't that much better than the intercept alone. The maximum value of R-squared is `r sprintf(".3f", coxphSum$rsq[[2]])`, indicating that our model reflects about one percent of the maximum.  
+
+Here is an analysis of deviance for the model:
+
+```{r anovaTable}
+
+pander(anova(modelCoxPH))
+
+```
+
+It appears that age at diagnosis, metastasis, grade, morphology, and radiation
+are all significant. Morphology wasn't significant when broken down according
+to its levels, but the variable as a whole is significant. There may be a
+combination of factors that does have predictive value, but I wouldn't know how
+to approach this possibility without imposing my own bias on the model.
+
+
+Here is a plot of the survival curve for this model: 
+
+```{r plotModel}
+
+plot(survfit(modelCoxPH), ylab = "Probability of Survival",
+     xlab = "Months Without Second Cancer", 
+     main = "Cox Proportional Hazards Model of Second Cancer Development")
+
+```
+
+Note, the confidence interval curves are very close to the estimated curve. This
+makes the curve appear as if it is thick.
+
+As an alternative, I'm going to see what the step function has to say about
+the kitchen sink model to see if there's anything better. I won't include step
+function output because it would make this document far longer. 
+
+```{r step, results = 'hide'}
+step(modelCoxPH)
+```
+
+Using AIC to select predictors, the step function returned the call
+`coxph(formula = Surv(time = timeCPH, event = censor) ~ Age.At.Diagnosis +
+Metastasis + Grade + Morphology + Radiation, data = bcfpModTrain)`. So, the
+step function would have us exclude sex, race, and size from the model. This is
+consistent with what has appeared to be significant so far. I'll use analysis of
+deviance to see which model has statistically significantly lower deviance. 
+
+```{r anovacox, results = 'asis'}
+
+modelCoxStep <- coxph(formula = Surv(time = timeCPH, event = censor) ~ Age.At.Diagnosis + 
+                                                                    ordered(Metastasis) + 
+                                                                    ordered(Grade) + 
+                                                                    Morphology + 
+                                                                    Radiation, 
+                      data = bcfpModTrain)
+
+pander(anova(modelCoxPH, modelCoxStep))
+
+```
+
+The drop in deviance is not significant, so I'll probably stick with the kitchen sink model. Just to be sure that the stepwise-selected model isn't that much better, I'll see what a summary of the stepwise model looks like. 
+
+```{r stepsum, results = 'asis'}
+
+coxphStep <- summary(modelCoxStep)
+
+pander(coxphStep$conf.int, caption = "Hazards and Confidence Intervals for the Stepwise Cox Proportional Hazards Model")
+
+pander(coxphStep$concordance, caption = "Concordance for the Stepwise Cox Proportional Hazards Model")
+
+pander(coxphStep$waldtest, caption = "Wald Test results for the Stepwise Cox Proportional Hazards Model")
+
+```
+
+All the predictors are statistically significant, but at the same significance levels. For the purposes of explanation and description of the model, I'll keep the statistically insignificant predictors. 
+
+
+##Summarizing the effect size of the Cox PH Model
+
+```{r effectSize}
+
+levels(bcfpModTrain$Metastasis) <- c(1, 2, 3)
+levels(bcfpModTrain$Grade) <- c(1, 2, 3, 4)
+
+units(bcfpModTrain$time) <- "month"
+
+dd <- datadist(bcfpModTrain)
+options(datadist = "dd")
+
+modelCPH <- cph(Surv(time = timeCPH, event = censor) ~ Race + 
+                                                        Sex + 
+                                                        Age.At.Diagnosis + 
+                                                        scored(Metastasis) + 
+                                                        scored(Grade) + 
+                                                        Morphology +
+                                                        Radiation + 
+                                                        Size, 
+                    data = bcfpModTrain, x = TRUE, y = TRUE, time.inc = 12, surv = TRUE)
+
+cphSum <- summary(modelCPH)
+
+dimnames(cphSum)[[1]] <- 
+  str_replace_all(string = dimnames(cphSum)[[1]], 
+                  pattern = "\\,\ NOS|Morphology\\ \\-\\ ", 
+                  replacement = "")
+
+plot(cphSum)
+
+```
+
+That's a nice plot of the effects. Those bars that don't cross one have a significant impact on hazard of developing a second cancer. For age at diagnosis going from 70 to 50, metastasis increasing from localized to regional, metastasis increasing from localized to distant, some of the morphology category changes, and radiation to lack of radiation, the hazard of developing a second cancer increases. 
+
+Still, curiously, going from grade 2 to grade 3 decreases the hazard of developing a second cancer. 
+
+##Testing the Proportional Hazards Assumption
+
+Here's a test for the cox proportional hazards assumption: 
+
+```{r cphTest}
+
+cphTestBC <- cox.zph(modelCPH, transform = "km", global = TRUE)
+
+pander(cphTestBC$table, caption = "Testing the Cox Proportional Hazards Assumption")
+
+```
+
+Given the great number of observations in the data, it's hard not to have low p-values. Still, we do have significantly non-zero slopes, and this indicates approximately proportional of hazards.
+
+My greatest concern regards the predictor, radiation. It has a rho value of 0.195. Age is also a bit concerning, with rho = 0.088. 
+
+There are two continuous variables to evaluate visually, size and age at diagnosis. Here's the plot for size: 
+
+```{r zphVizSize}
+
+plot(cox.zph(modelCPH, transform = "km", global = TRUE), var = c("Size"))
+
+```
+
+This is pretty flat, so it doesn't seem like the DFBetas change too much with increase in response. 
+
+
+```{r zphVizAge}
+
+plot(cox.zph(modelCPH, transform = "km", global = TRUE), var = c("Age.At.Diagnosis"))
+
+```
+
+This curve is a bit more curvy, corresponding to the numeric output above showing rho = 0.088.
+
+In any case, I'm not sure that the proportional hazards assumption is violated. Still, I'll check if the survival curves cross each other for radiation (which was the most concerning variable): 
+
+```{r survCurvCheck}
+
+autoplot(survfit(Surv(time = timeCPH, event = censor) ~ Radiation, data = bcfpModTrain))
+
+```
+
+It appears that the curves cross when time is near its maximum. That makes me think that weight should be given to the left-hand side of the curve when doing a log-rank test.
+
+In any case, I am worried about the proportional hazards violation. 
+
+
+##Assessing Collinearity
+
+
+
+```{r checkingVIF}
+
+pander(vif(modelCoxPH), caption = "Variance Inflation Factors for the Cox PH Model")
+
+```
+
+Again, there is significant collinearity among Morphology categories. I won't remove this, though, because the predictor was significant and because morphology plays a role in the natural history of cancer as a disease. 
+
+
+##In-Sample Validation
+
+Here's a calibration plot for the model: 
+
+```{r calPlot}
+
+plot(calibrate(modelCPH, B = 10, u = 12))
+
+```
+
+The model looks well-calibrated. It performs worse as time progresses. 
+
+Here's a 100-fold validation: 
+
+```{r valiPlot}
+
+valiCPH <- validate(modelCPH, B = 100)
+
+valiCPH
+
+pander(matrix(valiCPH[1:7,], 
+                    nrow = 7, 
+                    ncol = 6, 
+                    dimnames = dimnames(valiCPH)), 
+       caption = "100-fold validation of the model")
+
+```
+
+The corrected Dxy decreases by less than five percent of its original value, so
+that's not too bad.
+
+Corrected R-squared decreases by more than ten percent, but that might be a
+rounding issue because it's a smaller value.
+
+Slope decreases a bit, and might be concerning depending on how the model
+performs out-of-sample.
+
+Other values don't change too much.
+
+##Out-of-Sample Validation
+
+Here, I'll make some predictions and see how they line up with actual values.
+I'll be predicting the survival 
+
+```{r predVal}
+
+testData1 <- bcfp[!(bcfp$Case.Number %in% bcfpModTrain$Case.Number),] %>%      
+                                      sample_n(4e4) %>% select(MultipleCancerDx,
+                                                               Race,
+                                                               Sex,
+                                                               Age.At.Diagnosis, 
+                                                               Metastasis, 
+                                                               Grade, 
+                                                               Morphology,
+                                                               Radiation, 
+                                                               Size, 
+                                                               time,
+                                                               censor, 
+                                                               Case.Number)
+
+#levels(testData1$Metastasis) <- c("Localized", "Regional", "Distant")
+
+levels(testData1$Metastasis) <- c(1:3)
+
+levels(testData1$Grade) <- c(1:4)
+
+predicted <- survfit(modelCPH, newdata = testData1)
+
+plot(predicted$surv[,50], modelCPH$surv[-c(1, 348)], main = "Actual vs Predicted", 
+     xlab = "Predicted", ylab = "Actual")
+
+plotCPH <- data.frame(x = modelCPH$time, y = modelCPH$surv)
+
+ggplot() + geom_point(data = predicted, aes(x = time, 
+    y = predicted$surv[, 50], color = "Predicted")) + 
+    geom_point(data = plotCPH, aes(x = x, 
+        y = y, color = "Actual")) + ylim(c(0.75, 
+    1)) + ylab("Proportion Surviving") + 
+    xlab("Time in Months") + ggtitle("Predicted vs Actual Values for Kitchen Sink Model") + 
+    theme(panel.grid.major = element_line(colour = "grey", size = 0.4, linetype = "dashed"),
+        panel.background = element_rect(colour = "grey"))
+
+```
+
+I'm not sure if I made the previous graph correctly, and would love to discuss
+how to do this. By this graph, the model looks like an alright fit, with
+increasing divergence between actual and predicted values as time goes on. 
+
+
+***
+
+
+```{r finalCleaning}
+
+rm(list = ls()[-1])
+
+```
+
+#V. Reflection and Lessons Learned
+
+While I did learn a whole lot about data analysis, I think I learned just as much about how to make data useable. SEER provides its data in a widely dispersed format for reasons I can only speculate, but the R community has found ways around this common roadblock. 
+
+Recoding, however, is a less challenging task that requires more time and attention. I had the opportunity to do a lot of recoding. Despite the fact that it is less challenging for others, I found myself learning how to write and compose functions so that I could effectively manipulate data. For example, I remember when I realized that `do.call` can be thought of as analagous to the `apply` family, where `do.call` doesn't behave sequentially. This allowed me to read many files at once, when used in combination with `list.files`. 
+
+I also took the time to learn how to use GitHub in RStudio. The first time I used GitHub was around September of 2015, and that little crack in the ice was enough for me to completely slip through during the course of this semester. Whatever the task, it seems, there is fertile ground for learning. 
+
+I've also been branching out into other languages. Javascript and D3 are really attractive technologies, but I've forgone learning that in lieu of buffing up my computer science knowledge using a python-based version of *Structure and Interpretation of Computer Programs*. Given my background in Economics and Philosophy, this has required that I re-read the same page several times before I get it. These baby steps, however, are still steps. 
+
+Of course, I've also spent time how to more effectively work in R. As I mentioned in a previous paragraph, I've learned how to use some commands effectively. Besides that, I've learned some of the theory behind the R environment. I learned a while ago that everything in a Unix system can be considered a file. Similarly, everything that exists in R is an object, and everything that happens is a function call. Learning more about R and abstracting away various layers of user interface to reach these absolute generalities has been very rewarding, even if it just meant learning how long a road lies ahead of me. 
+
+Finally, and perhaps most importantly, I've learned more about the rigorous application of quantitative methods. Rather than hide behind a p-value, for example, I'm now more inclined to provide more descriptive summaries of a concept. Along with this, I have the chance to explain myself more often, and find myself re-formulating and cementing concepts out of a need to say them out loud. It's easy to think I've learned something after reading it, but it's honest to think I've learned something after I can teach it. 
+
+#VI. Future Directions
+
+##1. Cohort Selection
+
+I am a bit worried about the fact that a lot of the second cancers were breast
+cancers. This could be an issue if the second cancer is a recurrence of previous
+cancer, in which case this analysis would have lumped together cancer recurrence
+and new second cancer.
+
+One solution to this potential issue would be to exclude breast cancer as a
+second cancer. However, I'm not sure how to confirm that a second cancer is
+recurrent instead of de novo. There may be a SEER protocol for doing so, but I
+haven't been able to find it.
+
+##2. Matching Observations for Further Exploration
+
+It would be interesting to see whether matching race, sex, age, and other
+variables would impact the analysis. I imagine that doing so would help
+identify those other variables (namely, cancer characteristics) that influence
+development of second cancers.
+
+In addition to performing this analysis with breast cancers, it would be
+interesting to look at other cancers and their recurrence.
+
+I can't be confident in the following analysis because I don't have much
+experience in this approach, but here's my attempt at matching observations.
+Matching methods include (1) propensity score matching and (2) greedy algorithm
+matching.
+
+It would be a lot cooler to implement some sort of matching on my own, but for now
+I'll have to rely on an R package to help me out. 
+
+First, I'll try doing this using the "Matching" package. I'll print the code that I 
+use for this, unlike previous chunks. I'll be implementing this for the logistic
+regression whose outcome is development of a second cancer, looking to see if 
+radiation treatment has the same impact as non-matched logistic regression. I'll 
+base the propensity score on all covariates.
+
+```{r match1, echo = TRUE}
+
+library(Matching)
+
+bcfpMat <- sample_n(bcfp, 5e4)
+
+#setting seed in case it makes a difference to the command
+set.seed(432431)
+
+#retype for ease of use
+bcfpMat$RadMat <- with(bcfpMat, ifelse(Radiation == "Radiation", 1, 0))
+
+#set up formals
+Tr <- bcfpMat$RadMat
+
+Y <- bcfpMat$MultipleCancerDx
+
+X <- dplyr::select(.data = bcfpMat, Race, 
+                             Sex,
+                             Age.At.Diagnosis,
+                             Metastasis,
+                             Morphology,
+                             Grade,
+                             Size)
+
+X <- data.matrix(X)
+
+#do the match
+matchedRadCan <- Match(Y = Y, Tr = Tr, X = X, M = 1, version = "fast")
+
+#see how balance worked out
+ MBRadCan   <-    MatchBalance(RadMat ~ 
+                                     Race + 
+                                     Sex + 
+                                     Age.At.Diagnosis + 
+                                     Metastasis + 
+                                     Morphology + 
+                                     Grade + 
+                                     Size,
+                            data = bcfpMat, 
+                            match.out = matchedRadCan, 
+                            nboots = 100, 
+                            digits = 3)
+ 
+#in case I want to plot these values...
+before <- sapply(1:16, function(x) MBRadCan$BeforeMatching[[x]]$sdiff ) 
+after <- sapply(1:16, function(x) MBRadCan$AfterMatching[[x]]$sdiff ) 
+
+library(tidyr)
+
+plotFrame <- data.frame(before, after) %>% gather
+
+plotFrame$beforeAfter <- plotFrame$key
+
+plotFrame$key <- c(1:16, 1:16)
+
+ggplot(plotFrame, aes(y = key, x = value, color = beforeAfter)) + 
+  geom_point() + 
+  ggtitle("Love Plot for All Predictors Where Treatment is Radiation") + 
+  ylab("Variable (or Factor Level) ID") + 
+  xlab("Standardized Difference, Not Absolute Value") + 
+  theme(legend.title = element_blank())
+
+
+# propModel <- glm(RadMat ~ Race + 
+#                    Sex + 
+#                    Age.At.Diagnosis + 
+#                    Metastasis + 
+#                    Morphology + 
+#                    Grade + 
+#                    Size, family = "binomial", data = bcfpMat)
+# 
+# #probability propensity scores, as opposed to linear (log odds) 
+# ps <- predict(propModel, type = "response") 
+
+```
+
+
+##3. Better model evaluation
+
+It would be pretty cool to implement n-fold validation on the new data, given
+that there's so much of it. This might provide a better estimate of model
+performance.
+
+##4. Evaluating competing risks
+
+I want to learn more about survival analysis and longitudinal data analysis.
+I appreciated our discussion in class, but there's just so much more for me to
+learn in so many different areas. I'm still figuring out where I should start.
+
+***
+
+\pagebreak
+
+#Appendix I: Population Distributions
+
+Here are the numbers of observations falling into each category of categorical variables: 
+
+
+```{r categoricalDist, results = 'hide'}
+CreateTableOne(vars = c("MultipleCancerDx",
+                        "Race",
+                        "Sex",
+                        "Metastasis",
+                        "Morphology",
+                        "Grade",
+                        "Behavior.For.Analysis",
+                        "Survival.Flag",
+                        "Survival.PA.Flag",
+                        "Death.Due.To.Cancer",
+                        "Death.Not.Due.To.Cancer",
+                        "Radiation"), 
+              data = bcfp) %>% 
+                print() %>% 
+                pander(caption = "Overall Characteristics of the Entire Dataset")
+```
+
