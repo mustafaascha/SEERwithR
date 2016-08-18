@@ -6,13 +6,11 @@ output: html_document
 
 #Recoding SEER
 
-The data that SEER provides is a bit cryptic. Here, I'll show you some ways to make it look a little better. 
+The data that SEER provides is a bit cryptic. This shroud of mystery is thickened by my data use agreement with SEER, which said something about not sharing the data. So I simulated data for the purposes of this project. I made sure to include all of the possible values of categorical variables, so that code in this document will still be useful. 
 
-**Note:** I'm pretty sure that my data use agreement said something about not sharing the data, so I simulated data for the purposes of this project. I made sure to include all of the possible values of categorical variables, so that code in this document will still be useful. 
+The script included in the "02-Recoding" folder is a bit disorganized, and is from when I was just starting out as a coder. I am happy that I look at it and cringe a little bit because that means I've learned since then, but I also want it to be useful to you. 
 
-I would walk through the process of recoding these variables, but it's not very exciting. 
-
-Unfortunately, there's no order to the variables to recode. The script will still run, but I recommend running it interactively to keep track of what's going on. 
+If you'd like to use any of this work, feel free. I would just ask that you give credit where credit is due. 
 
 
 
